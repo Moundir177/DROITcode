@@ -1,5 +1,6 @@
 name = "droitfpra"
 compatibility_date = "2023-05-14"
+main = "./functions/api/index.js"
 
 # Specify the correct directory for the static export
 [site]
@@ -15,11 +16,18 @@ command = "npm run build"
 [site.static]
 include = ["_headers", "_redirects"]
 
+# Worker configuration
 [env.production]
-name = "droit-site"
-route = ""
+name = "droitfpra-api"
 workers_dev = true
 compatibility_date = "2023-05-14"
+routes = [
+  { pattern = "droitfpra.pages.dev/api*", zone_name = "pages.dev" }
+]
+
+# Functions binding for Pages Functions
+[env.production.functions_binding]
+pages_app_binding = "PAGES_APP"
 
 [env.production.build]
 command = "npm run build"

@@ -3,11 +3,12 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FaHome, FaNewspaper, FaBook, FaUsers, FaCog, FaFileAlt, FaSync, FaDatabase, FaExclamationTriangle } from 'react-icons/fa';
+import { FaHome, FaNewspaper, FaBook, FaUsers, FaCog, FaFileAlt, FaSync, FaDatabase } from 'react-icons/fa';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import AdminSidebar from '@/components/AdminSidebar';
-import { getNews, getResources, getAllPages, initializeDatabase, syncContentToEditor, updateHomePageWithAllSections, updateAboutPageWithAllSections, updateProgramsPageWithAllSections } from '@/lib/database';
+import ApiStatus from '@/components/ApiStatus';
+import { getNews, getResources, getAllPages, initializeDatabase, syncContentToEditor } from '@/lib/database';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -161,12 +162,6 @@ export default function AdminDashboard() {
       
       // Initialize the database with default values
       initializeDatabase();
-      
-      // Initialize all page sections
-      updateHomePageWithAllSections();
-      updateAboutPageWithAllSections();
-      updateProgramsPageWithAllSections();
-      
       localStorage.setItem('dbInitialized', 'true');
       
       // Create default recent edits
@@ -179,40 +174,6 @@ export default function AdminDashboard() {
         setIsResetting(false);
         window.location.reload();
       }, 1000);
-    }
-  };
-
-  const handleForceInitialization = () => {
-    setIsResetting(true);
-    
-    try {
-      // Force reinitialization
-      localStorage.removeItem('dbInitialized');
-      
-      // Initialize the database with default values
-      initializeDatabase();
-      
-      // Initialize all page sections
-      updateHomePageWithAllSections();
-      updateAboutPageWithAllSections();
-      updateProgramsPageWithAllSections();
-      
-      localStorage.setItem('dbInitialized', 'true');
-      
-      // Create default recent edits
-      createDefaultEdits();
-      
-      // Refresh statistics
-      refreshStats();
-      
-      window.alert(language === 'fr'
-        ? 'Base de données réinitialisée avec succès!'
-        : 'تمت إعادة تعيين قاعدة البيانات بنجاح!');
-    } catch (error) {
-      console.error('Error during initialization:', error);
-      window.alert('Error: ' + (error instanceof Error ? error.message : String(error)));
-    } finally {
-      setIsResetting(false);
     }
   };
 
@@ -288,97 +249,85 @@ export default function AdminDashboard() {
               {isSyncing ? (
                 <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
               ) : (
-                <FaSync className="mr-2" />
+                <FaSync className="w-4 h-4 mr-2" />
               )}
-              {language === 'fr' ? 'Synchroniser le contenu' : 'مزامنة المحتوى'}
+              {language === 'fr' ? 'Synchroniser' : 'مزامنة'}
             </button>
-            
-            <Link href="/admin/pages/edit/home" className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
-              {language === 'fr' ? 'Voir le site' : 'عرض الموقع'}
-            </Link>
+            <button
+              onClick={handleResetContent}
+              disabled={isResetting}
+              className="flex items-center px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+            >
+              {isResetting ? (
+                <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+              ) : (
+                <FaDatabase className="w-4 h-4 mr-2" />
+              )}
+              {language === 'fr' ? 'Réinitialiser' : 'إعادة تعيين'}
+            </button>
           </div>
         </div>
         
-        {/* Database Reset Warning Box */}
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-8">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <FaExclamationTriangle className="h-5 w-5 text-yellow-400" />
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-yellow-800">
-                {language === 'fr' ? 'Problèmes avec l\'interface d\'administration?' : 'مشاكل في واجهة الإدارة؟'}
-              </h3>
-              <div className="mt-2 text-sm text-yellow-700">
-                <p>
-                  {language === 'fr' 
-                    ? 'Si vous rencontrez des problèmes avec l\'affichage des données dans l\'interface d\'administration, utilisez le bouton ci-dessous pour réinitialiser la base de données locale.'
-                    : 'إذا كنت تواجه مشاكل في عرض البيانات في واجهة الإدارة، استخدم الزر أدناه لإعادة تعيين قاعدة البيانات المحلية.'}
-                </p>
-              </div>
-              <div className="mt-4">
-                <button
-                  type="button"
-                  onClick={handleForceInitialization}
-                  className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
-                >
-                  {isResetting ? (
-                    <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
-                  ) : (
-                    <FaDatabase className="mr-2" />
-                  )}
-                  {language === 'fr' ? 'Réinitialiser la base de données' : 'إعادة تعيين قاعدة البيانات'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* API Status Component */}
+        <ApiStatus />
         
-        {/* Content Stats Grid */}
+        {/* Content Summary */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {contentSections.slice(0, 3).map((section, index) => (
-            <Link href={section.link} key={index}>
-              <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-                <div className="flex items-center mb-4">
-                  <div className={`p-3 rounded-full ${section.color} mr-4`}>
-                    {section.icon}
-                  </div>
-                  <h2 className="text-xl font-semibold text-gray-700">{section.title}</h2>
+          {contentSections.map((section, index) => (
+            <Link 
+              href={section.link}
+              key={index} 
+              className="block bg-white rounded-lg shadow hover:shadow-md transition-shadow overflow-hidden"
+            >
+              <div className="flex items-center p-6">
+                <div className={`${section.color} p-3 rounded-full mr-4`}>
+                  {section.icon}
                 </div>
-                {section.count !== null && (
-                  <div className="text-4xl font-bold text-gray-800">{section.count}</div>
-                )}
+                <div>
+                  <h3 className="font-semibold text-gray-800">{section.title}</h3>
+                  {section.count !== null && (
+                    <p className="text-gray-600 mt-1">
+                      {section.count} {language === 'fr' ? 'éléments' : 'عناصر'}
+                    </p>
+                  )}
+                </div>
               </div>
             </Link>
           ))}
         </div>
         
-        {/* Recent Modifications */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">
+        {/* Recent Edits */}
+        <div className="bg-white rounded-md shadow-md p-6">
+          <h2 className="text-xl font-bold text-gray-800 mb-4">
             {language === 'fr' ? 'Modifications récentes' : 'التعديلات الأخيرة'}
           </h2>
-          <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="overflow-x-auto">
             <table className="min-w-full">
-              <thead className="bg-gray-50">
-                <tr>
+              <thead>
+                <tr className="bg-gray-50">
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {language === 'fr' ? 'PAGE' : 'الصفحة'}
+                    {language === 'fr' ? 'Page' : 'الصفحة'}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {language === 'fr' ? 'DATE' : 'التاريخ'}
+                    {language === 'fr' ? 'Date' : 'التاريخ'}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {language === 'fr' ? 'UTILISATEUR' : 'المستخدم'}
+                    {language === 'fr' ? 'Utilisateur' : 'المستخدم'}
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {recentEdits.map((edit) => (
-                  <tr key={edit.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{edit.page}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{edit.date}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{edit.user}</td>
+                  <tr key={edit.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {edit.page}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {edit.date}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {edit.user}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -386,41 +335,129 @@ export default function AdminDashboard() {
           </div>
         </div>
         
-        {/* Quick Actions */}
-        <div>
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">
-            {language === 'fr' ? 'Actions rapides' : 'إجراءات سريعة'}
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {contentSections.map((section, index) => (
-              <Link href={section.link} key={index}>
-                <div className="bg-white p-4 rounded-lg shadow flex items-center hover:bg-gray-50 transition-colors">
-                  <div className={`p-2 rounded-full ${section.color} mr-3`}>
-                    {section.icon}
-                  </div>
-                  <h3 className="text-sm font-medium text-gray-700">{section.title}</h3>
-                </div>
-              </Link>
-            ))}
-            
-            {/* Reset Content Button */}
-            <button
-              onClick={handleResetContent}
-              disabled={isResetting}
-              className="bg-white p-4 rounded-lg shadow flex items-center hover:bg-gray-50 transition-colors"
-            >
-              <div className="p-2 rounded-full bg-red-500 mr-3">
-                <FaSync className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-sm font-medium text-gray-700">
-                {isResetting ? (
-                  language === 'fr' ? 'Réinitialisation...' : 'جاري إعادة التعيين...'
-                ) : (
-                  language === 'fr' ? 'Réinitialiser tout' : 'إعادة تعيين الكل'
-                )}
-              </h3>
-            </button>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-8">
+          <div className="bg-white p-6 rounded-xl shadow-md flex items-center">
+            <div className="bg-blue-100 p-3 rounded-full mr-4">
+              <FaNewspaper className="text-blue-500 text-2xl" />
+            </div>
+            <div>
+              <p className="text-gray-500">{language === 'fr' ? 'Actualités' : 'الأخبار'}</p>
+              <h2 className="text-2xl font-bold">{stats.news}</h2>
+            </div>
           </div>
+          
+          <div className="bg-white p-6 rounded-xl shadow-md flex items-center">
+            <div className="bg-green-100 p-3 rounded-full mr-4">
+              <FaBook className="text-green-500 text-2xl" />
+            </div>
+            <div>
+              <p className="text-gray-500">{language === 'fr' ? 'Ressources' : 'الموارد'}</p>
+              <h2 className="text-2xl font-bold">{stats.resources}</h2>
+            </div>
+          </div>
+          
+          <div className="bg-white p-6 rounded-xl shadow-md flex items-center">
+            <div className="bg-orange-100 p-3 rounded-full mr-4">
+              <FaFileAlt className="text-orange-500 text-2xl" />
+            </div>
+            <div>
+              <p className="text-gray-500">{language === 'fr' ? 'Pages' : 'الصفحات'}</p>
+              <h2 className="text-2xl font-bold">{stats.pages}</h2>
+            </div>
+          </div>
+        </div>
+        
+        {/* Quick Actions */}
+        <h2 className="text-2xl font-bold mb-6">
+          {language === 'fr' ? 'Actions rapides' : 'إجراءات سريعة'}
+        </h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          <Link href="/admin/news/create" className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow">
+            <FaNewspaper className="text-blue-500 text-2xl mb-4" />
+            <h3 className="font-bold text-lg mb-2">
+              {language === 'fr' ? 'Ajouter actualité' : 'إضافة خبر'}
+            </h3>
+            <p className="text-gray-500 text-sm">
+              {language === 'fr' ? 'Créer une nouvelle actualité' : 'إنشاء خبر جديد'}
+            </p>
+          </Link>
+          
+          <Link href="/admin/resources/create" className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow">
+            <FaBook className="text-green-500 text-2xl mb-4" />
+            <h3 className="font-bold text-lg mb-2">
+              {language === 'fr' ? 'Ajouter ressource' : 'إضافة مورد'}
+            </h3>
+            <p className="text-gray-500 text-sm">
+              {language === 'fr' ? 'Ajouter une nouvelle ressource' : 'إضافة مورد جديد'}
+            </p>
+          </Link>
+          
+          <Link href="/admin/pages" className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow">
+            <FaFileAlt className="text-orange-500 text-2xl mb-4" />
+            <h3 className="font-bold text-lg mb-2">
+              {language === 'fr' ? 'Éditer pages' : 'تحرير الصفحات'}
+            </h3>
+            <p className="text-gray-500 text-sm">
+              {language === 'fr' ? 'Modifier le contenu des pages' : 'تعديل محتوى الصفحات'}
+            </p>
+          </Link>
+          
+          <button 
+            onClick={refreshStats}
+            className="text-left bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow"
+          >
+            <FaSync className="text-gray-500 text-2xl mb-4" />
+            <h3 className="font-bold text-lg mb-2">
+              {language === 'fr' ? 'Actualiser les stats' : 'تحديث الإحصاءات'}
+            </h3>
+            <p className="text-gray-500 text-sm">
+              {language === 'fr' ? 'Mettre à jour les statistiques' : 'تحديث الإحصائيات'}
+            </p>
+          </button>
+        </div>
+        
+        {/* Admin Tools */}
+        <h2 className="text-2xl font-bold mb-6">
+          {language === 'fr' ? 'Outils administrateur' : 'أدوات المسؤول'}
+        </h2>
+        
+        <div className="bg-white p-6 rounded-xl shadow-md mb-8">
+          <h3 className="font-bold text-lg mb-4 flex items-center">
+            <FaSync className="text-red-500 mr-2" />
+            {language === 'fr' ? 'Réinitialiser le contenu' : 'إعادة تعيين المحتوى'}
+          </h3>
+          <p className="text-gray-500 mb-4">
+            {language === 'fr' 
+              ? 'Cette action réinitialisera tout le contenu aux valeurs par défaut actuelles. Utilisez avec précaution!' 
+              : 'سيؤدي هذا الإجراء إلى إعادة تعيين كل المحتوى إلى القيم الافتراضية الحالية. استخدم بحذر!'}
+          </p>
+          <button 
+            onClick={handleResetContent}
+            disabled={isResetting}
+            className={`px-4 py-2 rounded-lg text-white font-medium flex items-center ${
+              isResetting ? 'bg-gray-400' : 'bg-red-500 hover:bg-red-600'
+            }`}
+          >
+            {isResetting && (
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            )}
+            {language === 'fr' 
+              ? isResetting ? 'Réinitialisation...' : 'Réinitialiser le contenu' 
+              : isResetting ? 'جاري إعادة التعيين...' : 'إعادة تعيين المحتوى'}
+          </button>
+        </div>
+        
+        <div className="bg-gray-100 p-4 rounded-lg border border-gray-200 text-sm text-gray-600">
+          <p>
+            {language === 'fr' 
+              ? 'Rappel : Ce système de gestion de contenu utilise le stockage local du navigateur. Dans un environnement de production, les données seraient stockées sur un serveur.' 
+              : 'تذكير: يستخدم نظام إدارة المحتوى هذا التخزين المحلي للمتصفح. في بيئة الإنتاج، سيتم تخزين البيانات على خادم.'}
+          </p>
         </div>
       </main>
     </div>
