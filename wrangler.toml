@@ -21,9 +21,7 @@ include = ["_headers", "_redirects"]
 name = "droitfpra-api"
 workers_dev = true
 compatibility_date = "2023-05-14"
-routes = [
-  { pattern = "droitfpra.pages.dev/api*", zone_name = "pages.dev" }
-]
+routes = ["droitfpra.pages.dev/api*"]
 
 # Functions binding for Pages Functions
 [env.production.functions_binding]
