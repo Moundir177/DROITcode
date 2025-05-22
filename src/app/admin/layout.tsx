@@ -3,6 +3,7 @@
 import { useState, useEffect, ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { AuthProvider } from '@/contexts/AuthContext';
+import DatabaseInitializer from '@/components/DatabaseInitializer';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -22,13 +23,19 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     const isLoginPage = pathname === '/admin';
     
     if (isLoginPage) {
-      return <>{children}</>;
+      return (
+        <>
+          <DatabaseInitializer />
+          {children}
+        </>
+      );
     }
   }
 
   return (
     <AuthProvider>
       {/* Admin pages don't show the regular site header/footer */}
+      <DatabaseInitializer />
       {children}
     </AuthProvider>
   );
