@@ -1,0 +1,8 @@
+# Wrangler Pages Configuration
+pages_build_output_dir = "out"
+
+[site]
+bucket = "./out"
+
+[env.production]
+name = "droitfpra" 
