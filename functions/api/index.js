@@ -1,6 +1,5 @@
 // Cloudflare Worker API for DROIT application
-export async function onRequest(context) {
-  const { request } = context;
+async function handleRequest(request, env) {
   const url = new URL(request.url);
   const path = url.pathname;
   
@@ -119,4 +118,9 @@ export async function onRequest(context) {
     headers,
     status: 404
   });
-} 
+}
+
+// Add event listener to handle fetch events
+addEventListener('fetch', event => {
+  event.respondWith(handleRequest(event.request, event.env));
+}); 
