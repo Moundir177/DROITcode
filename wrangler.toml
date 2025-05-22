@@ -29,8 +29,4 @@ pages_app_binding = "PAGES_APP"
 
 [env.production.build]
 command = "npm run build"
-output_directory = "out"
-
-[[env.production.routes]]
-pattern = "/*"
-script = "" 
+output_directory = "out" 
